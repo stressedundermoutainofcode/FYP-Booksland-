@@ -1,25 +1,55 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import "./index.css";
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import Homepage from "./components/homepage";
+import Navbar from "./components/navbar";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Footer from "./components/footer";
+// import Navbar from "./components/Navbar";
 
-function App() {
+import { AuthContextProvider } from "./context/AuthContext";// import Footer from "./components/Footer";
+
+const App = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <AuthContextProvider>
+        <Router>
+          <Routes>
+            {/* Route to different pages are here */}
+            <Route
+              path="Homepage"
+              element={
+                <>
+                  <Navbar />
+                  <Homepage />
+                  <Footer />
+                  <Login/>
+                </>
+              }
+            />
+            <Route
+              exact
+              path="/"
+              element={
+                <>
+                  <Navbar />
+                  <Homepage />
+                  <Footer />
+                </>
+              }
+            />
+            <Route path="/Login" element={<Login />} />
+            <Route path="/Register" element={<Register />} />
+         
+
+            {/* <Route path="/" component={<DefaultComponent/>}/> */}
+          </Routes>
+        </Router>
+      </AuthContextProvider>
+  
     </div>
   );
-}
+};
 
 export default App;
