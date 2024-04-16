@@ -40,7 +40,8 @@ const Users = mongoose.model("Users", {
   password: String,
   cartProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
 });
-const Prodcuts = mongoose.model("Products", {
+
+let Schema = new mongoose.Schema({
   bookName: String,
   bookDescription: String,
   bookPrice: String,
@@ -48,9 +49,22 @@ const Prodcuts = mongoose.model("Products", {
   bookImage: String,
   bookImage2: String,
   addedBy:mongoose.Schema.Types.ObjectId,
-  postingTime: { type: Date, default: Date.now }
+  postingTime: { type: Date, default: Date.now },
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true
+    },
+    coordinates: {
+      type: [Number],
+      required: true
+    }
+  }
 
-});
+})
+Schema.index({location: '2dsphere'});
+const Prodcuts = mongoose.model("Products",Schema);
 
 app.get("/", (req, res) => {
   res.send(`<h1>Hello World!</h1>`);
@@ -107,6 +121,9 @@ app.post("/login", (req, res) => {
 app.post("/add-product", upload.fields([{name: 'bookImage'}, {name: 'bookImage2'}]), (req, res) => {
   console.log(req.body);
   console.log(req.files)
+
+  const latitude = req.body.latitude;
+  const longitude = req.body.longitude;
   const bookName = req.body.bookName;
   const bookImage = req.files.bookImage[0].path;
   const bookImage2 = req.files.bookImage2[0].path;
@@ -124,7 +141,11 @@ app.post("/add-product", upload.fields([{name: 'bookImage'}, {name: 'bookImage2'
     bookImage,
     bookImage2,
     addedBy,
-    postingTime 
+    postingTime,
+    location: {
+      type: "Point",
+      coordinates: [longitude, latitude],
+    },
   });
 
   product
@@ -200,21 +221,39 @@ app.get("/get-product/:id", (req, res) => {
 
 //search backend api
 
-app.get('/search', (req,res) =>{
-  let search = req.query.search
-   Prodcuts.find({
-    $or : [
-      {bookName : {$regex : search, $options : 'i'}},
-      {bookCategory: {$regex : search, $options : 'i'}},
-      {bookDescription: {$regex : search, $options : 'i'}},
-    ]
-   })
-   .then((results)=>{
-    res.send({message:'success', products:results})
+// search backend api
+app.get('/search', (req, res) =>{
+  console.log(req.query);
  
-   })
-   .catch((err)=>{
-    res.send({message:'server err'})
-   })
-})
+  let latitude = parseFloat(req.query.loc.split(',')[0]);
+  let longitude = parseFloat(req.query.loc.split(',')[1]);
+  console.log(latitude, longitude);
+  
+  let search = req.query.search;
+  
+  Prodcuts.find({
+    $or: [
+      { bookName: { $regex: search, $options: 'i' } },
+      { bookCategory: { $regex: search, $options: 'i' } },
+      { bookDescription: { $regex: search, $options: 'i' } },
+    ],
+    location: {
+      $near: {
+        $geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+        },
+        $maxDistance: 20000// Specify the maximum distance in meters
+      }
+    }
+  })
+  .then((results) => {
+    res.send({ message: 'success', products: results });
+  })
+  .catch((err) => {
+    console.error(err);
+    res.send({ message: 'server err' });
+  });
+});
+
 
