@@ -46,6 +46,10 @@ const Prodcuts = mongoose.model("Products", {
   bookPrice: String,
   bookCategory: String,
   bookImage: String,
+  bookImage2: String,
+  addedBy:mongoose.Schema.Types.ObjectId,
+  postingTime: { type: Date, default: Date.now }
+
 });
 
 app.get("/", (req, res) => {
@@ -100,21 +104,29 @@ app.post("/login", (req, res) => {
 });
 
 //add listing
-app.post("/add-product", upload.single("bookImage"), (req, res) => {
+app.post("/add-product", upload.fields([{name: 'bookImage'}, {name: 'bookImage2'}]), (req, res) => {
   console.log(req.body);
-  console.log(req.file.path);
+  console.log(req.files)
   const bookName = req.body.bookName;
-  const bookImage = req.file.path;
+  const bookImage = req.files.bookImage[0].path;
+  const bookImage2 = req.files.bookImage2[0].path;
   const bookPrice = req.body.bookPrice;
   const bookDescription = req.body.bookDescription;
   const bookCategory = req.body.bookCategory;
+  const addedBy = req.body.userId;
+  const postingTime = new Date(); // Current time
+
   const product = new Prodcuts({
     bookName,
     bookDescription,
     bookPrice,
     bookCategory,
     bookImage,
+    bookImage2,
+    addedBy,
+    postingTime 
   });
+
   product
     .save()
     .then(() => {
@@ -125,8 +137,13 @@ app.post("/add-product", upload.single("bookImage"), (req, res) => {
     });
 });
 
+
 app.get("/get-products", (req, res) => {
-  Prodcuts.find()
+  const catName = req.query.catName;
+  console.log(catName);
+
+  Prodcuts.find({ category: catName })
+    .sort({ postingTime: -1 }) // Sorting by posting time in descending order
     .then((result) => {
       console.log({ result: "product data" });
       res.send({ message: "success", products: result });
@@ -135,6 +152,7 @@ app.get("/get-products", (req, res) => {
       res.send({ message: "server err" });
     });
 });
+
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
@@ -155,6 +173,7 @@ app.post('/cart-products', (req, res) => {
     })
 })
 
+// cart products
 app.post("/cart", (req, res) => {
   Users.findOne({_id : req.body.userId}).populate('cartProducts')
     .then((result) => {
@@ -165,4 +184,37 @@ app.post("/cart", (req, res) => {
       res.send({ message: "server err" });
     });
 });
+
+
+app.get("/get-product/:id", (req, res) => {
+  console.log(req.params)
+  Prodcuts.findOne({ _id : req.params.id})
+    .then((result) => {
+      // console.log({ result: "product data" });
+      res.send({ message: "success", product: result });
+    })
+    .catch((err) => {
+      res.send({ message: "server err" });
+    });
+});
+
+//search backend api
+
+app.get('/search', (req,res) =>{
+  let search = req.query.search
+   Prodcuts.find({
+    $or : [
+      {bookName : {$regex : search, $options : 'i'}},
+      {bookCategory: {$regex : search, $options : 'i'}},
+      {bookDescription: {$regex : search, $options : 'i'}},
+    ]
+   })
+   .then((results)=>{
+    res.send({message:'success', products:results})
+ 
+   })
+   .catch((err)=>{
+    res.send({message:'server err'})
+   })
+})
 
