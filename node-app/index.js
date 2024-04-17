@@ -78,13 +78,13 @@ app.post("/signup", (req, res) => {
   const user = new Users({ username, password })
     .save()
     .then((doc) => {
-      res.status(201).send({ message: `User ${doc.username} created` });
+      res.send({ message: `User ${doc.username} created` });
       console.log("User added");
       res.json(doc);
     })
     .catch((err) => {
       console.error(err);
-      res.status(500).send("Error adding the user.");
+      res.send("Error adding the user.");
     });
 });
 
@@ -119,8 +119,7 @@ app.post("/login", (req, res) => {
 
 //add listing
 app.post("/add-product", upload.fields([{name: 'bookImage'}, {name: 'bookImage2'}]), (req, res) => {
-  console.log(req.body);
-  console.log(req.files)
+ 
 
   const latitude = req.body.latitude;
   const longitude = req.body.longitude;
@@ -161,12 +160,10 @@ app.post("/add-product", upload.fields([{name: 'bookImage'}, {name: 'bookImage2'
 
 app.get("/get-products", (req, res) => {
   const catName = req.query.catName;
-  console.log(catName);
 
   Prodcuts.find({ category: catName })
     .sort({ postingTime: -1 }) // Sorting by posting time in descending order
     .then((result) => {
-      console.log({ result: "product data" });
       res.send({ message: "success", products: result });
     })
     .catch((err) => {
@@ -194,7 +191,7 @@ app.post('/cart-products', (req, res) => {
     })
 })
 
-// cart products
+// get cart products
 app.post("/cart", (req, res) => {
   Users.findOne({_id : req.body.userId}).populate('cartProducts')
     .then((result) => {
@@ -208,10 +205,8 @@ app.post("/cart", (req, res) => {
 
 
 app.get("/get-product/:id", (req, res) => {
-  console.log(req.params)
   Prodcuts.findOne({ _id : req.params.id})
     .then((result) => {
-      // console.log({ result: "product data" });
       res.send({ message: "success", product: result });
     })
     .catch((err) => {
@@ -223,11 +218,9 @@ app.get("/get-product/:id", (req, res) => {
 
 // search backend api
 app.get('/search', (req, res) =>{
-  console.log(req.query);
  
   let latitude = parseFloat(req.query.loc.split(',')[0]);
   let longitude = parseFloat(req.query.loc.split(',')[1]);
-  console.log(latitude, longitude);
   
   let search = req.query.search;
   
@@ -251,9 +244,34 @@ app.get('/search', (req, res) =>{
     res.send({ message: 'success', products: results });
   })
   .catch((err) => {
-    console.error(err);
     res.send({ message: 'server err' });
   });
 });
 
+//get my listings
+app.post('/my-products',(req,res) => {
+  Prodcuts.find({ addedBy:req.body.userId })
+  .then((result)=>{
+    res.send({message: 'success', products:result})
+
+  })
+  .catch((err)=>{
+    res.send({message:'server err'})
+  })
+})
+
+//user profile api
+app.get('/my-profile/:id',(req,res)=>{
+  console.log(req.params.id)
+  Users.findOne({ _id : req.params.id})
+  .then((result)=>{
+    res.send({message:'success', user:{
+      username:result.username,
+      
+    }})
+  })
+  .catch((err)=>{
+    res.send({message:'server err'})
+  })
+})
 
